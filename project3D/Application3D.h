@@ -5,7 +5,9 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "OBJMesh.h"
-#include "Camera.h"
+#include "Scene.h"
+
+class Instance;
 
 class Application3D : public aie::Application {
 public:
@@ -33,15 +35,7 @@ protected:
 	aie::Texture m_gridTexture;
 
 	aie::OBJMesh m_bunnyMesh;
-	glm::mat4 m_bunnyTransform;
-
 	aie::OBJMesh m_spearMesh;
-	glm::mat4 m_spearTransform;
 
-	struct Light {
-		glm::vec3 direction;
-	};
-	Light m_light;
-
-	Camera cam;
+	Scene scene;
 };

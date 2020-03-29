@@ -5,6 +5,9 @@
 #include <glm/ext.hpp>
 #include <time.h>
 
+#include "tiny_obj_loader.h"
+#include "Instance.h"
+
 using glm::vec3;
 using glm::vec4;
 using glm::mat4;
@@ -43,6 +46,15 @@ bool Application3D::startup() {
 		return false;
 	}
 
+	// initalise the scene;
+	scene.camera = new Camera();
+	// yellow light
+	scene.m_light[0].direction = glm::normalize(vec3(1, 1, 1));
+	scene.m_light[0].color = glm::vec3(1, 1, 0.5f);
+	// second blue light comes from opposite direction but still from above
+	scene.m_light[1].direction = glm::normalize(vec3(-1, 1, -1));
+	scene.m_light[1].color = glm::vec3(0.5f, 0.5f, 1);
+
 	// define 4 vertices for 2 triangles
 	Mesh::Vertex vertices[4];
 	vertices[0].position = { -0.5f, 0, 0.5f, 1 };
@@ -68,8 +80,6 @@ bool Application3D::startup() {
 		return false;
 	}
 
-	//m_quadMesh.initialiseQuad();
-
 	// make the quad 10 units wide
 	m_quadTransform = {
 	10,0,0,0,
@@ -77,29 +87,24 @@ bool Application3D::startup() {
 	0,0,10,0,
 	0,0,0,1 };
 
-
-	//if (m_bunnyMesh.load("./stanford/bunny.obj") == false) {
-	//	printf("Bunny Mesh Error!\n");
-	//	return false;
-	//}
-	m_bunnyTransform = {
-	0.5f,0,0,0,
-	0,0.5f,0,0,
-	0,0,0.5f,0,
-	0,0,0,1
-	};
+	// load our models
+	if (m_bunnyMesh.load("./stanford/bunny.obj") == false) {
+		printf("Bunny Mesh Error!\n");
+		return false;
+	}
 
 	if (m_spearMesh.load("./soulspear/soulspear.obj",
 		true, true) == false) {
 		printf("Soulspear Mesh Error!\n");
 		return false;
 	}
-	m_spearTransform = {
-	1,0,0,0,
-	0,1,0,0,
-	0,0,1,0,
-	0,0,0,1
-	};
+
+	// assemble our scene
+	scene.m_Instances.push_back(new Instance(vec3(5, 0, 5), vec3(0), vec3(1), &m_shader, &m_spearMesh));
+	scene.m_Instances.push_back(new Instance(vec3(-5, 0, 5), vec3(0), vec3(1), &m_texturedShader, &m_spearMesh));
+	scene.m_Instances.push_back(new Instance(vec3(5, 0, -5), vec3(0), vec3(1), &m_texturedShader, &m_spearMesh));
+	scene.m_Instances.push_back(new Instance(vec3(-5, 0, -5), vec3(0), vec3(1), &m_texturedShader, &m_spearMesh));
+	scene.m_Instances.push_back(new Instance(vec3(0, 0, 0), vec3(0), vec3(1), &m_texturedShader, &m_bunnyMesh));
 
 	return true;
 }
@@ -138,13 +143,12 @@ void Application3D::update(float deltaTime)
 	// query time since application started
 	time = 0; // getTime();
 	// rotate light
-	m_light.direction = glm::normalize(vec3(glm::cos(time * 2),
-		-1, glm::sin(time * 2)));
+
+	scene.width = getWindowWidth();
+	scene.height = getWindowHeight();
 
 	// update the camera and store its matrices for later use
-	cam.Update(deltaTime);
-	m_viewMatrix = cam.GetViewMatrix();
-	m_projectionMatrix = cam.GetProjectionMatrix(getWindowWidth(), getWindowHeight());
+	scene.camera->Update(deltaTime);
 
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
@@ -157,7 +161,7 @@ void Application3D::draw() {
 	// bind shader
 	m_texturedShader.bind();
 
-	m_texturedShader.bindUniform("cameraPosition", cam.GetPosition());
+	m_texturedShader.bindUniform("cameraPosition", scene.camera->GetPosition());
 
 	// bind transform
 	auto pvm = m_projectionMatrix * m_viewMatrix * m_quadTransform;
@@ -170,7 +174,9 @@ void Application3D::draw() {
 	// draw quad
 	m_quadMesh.draw();
 
-
+	glm::mat4 camTrans(0);
+	const glm::mat4& ref = camTrans;
+	vec3 v = glm::normalize(vec3(ref[3]) - vec3(1,1,1));
 
 	// draw the bunny in pink
 	//m_shader.bind();
@@ -183,19 +189,10 @@ void Application3D::draw() {
 	// draw mesh
 	//m_bunnyMesh.draw();
 
-
-	// bind transform
-	pvm = m_projectionMatrix * m_viewMatrix * m_spearTransform;
-	m_texturedShader.bindUniform("ProjectionViewModel", pvm);
-	// bind transforms for lighting
-	m_texturedShader.bindUniform("NormalMatrix",
-		glm::inverseTranspose(glm::mat3(m_spearTransform)));
-	m_texturedShader.bindUniform("lightDirection", m_light.direction);
-	// draw mesh
-	m_spearMesh.draw();
+	scene.draw();
 
 	// draw 3D gizmos
-	Gizmos::draw(m_projectionMatrix * m_viewMatrix);
+	Gizmos::draw(scene.camera->GetProjectionMatrix(getWindowWidth(), getWindowHeight()) * scene.camera->GetViewMatrix());
 	// draw 2D gizmos using an orthogonal projection matrix
 	Gizmos::draw2D((float)getWindowWidth(), (float)getWindowHeight());
 }
