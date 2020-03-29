@@ -5,6 +5,7 @@ class Camera
 {
 public:
 	Camera();
+	Camera(glm::vec3 pos, float th, float ph) : position(pos), theta(th), phi(ph) {}
 
 	glm::mat4 GetViewMatrix();
 	glm::mat4 GetProjectionMatrix(float w, float h);

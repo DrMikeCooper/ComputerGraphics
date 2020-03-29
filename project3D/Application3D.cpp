@@ -5,6 +5,8 @@
 #include <glm/ext.hpp>
 #include <time.h>
 
+#include <imgui.h>
+
 #include "tiny_obj_loader.h"
 #include "Instance.h"
 
@@ -47,7 +49,8 @@ bool Application3D::startup() {
 	}
 
 	// initalise the scene;
-	scene.camera = new Camera();
+	scene.camera = new Camera(vec3(-8,11,8), -50, -30);
+
 	// yellow light
 	scene.m_light[0].direction = glm::normalize(vec3(1, 1, 1));
 	scene.m_light[0].color = glm::vec3(1, 1, 0.5f);
@@ -152,6 +155,11 @@ void Application3D::update(float deltaTime)
 
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
+
+	ImGui::Begin("Light");
+	ImGui::SliderFloat3("Color1", &scene.m_light[0].color[0], 0, 1);
+	ImGui::SliderFloat3("Color2", &scene.m_light[1].color[0], 0, 1);
+	ImGui::End();
 }
 
 void Application3D::draw() {
@@ -195,4 +203,6 @@ void Application3D::draw() {
 	Gizmos::draw(scene.camera->GetProjectionMatrix(getWindowWidth(), getWindowHeight()) * scene.camera->GetViewMatrix());
 	// draw 2D gizmos using an orthogonal projection matrix
 	Gizmos::draw2D((float)getWindowWidth(), (float)getWindowHeight());
+
+	
 }
